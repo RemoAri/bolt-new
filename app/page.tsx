@@ -10,6 +10,8 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { FolderList } from '@/components/folder-list';
 import { Toaster } from '@/components/ui/toaster';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function Home() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
@@ -17,6 +19,8 @@ export default function Home() {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFolder, setActiveFolder] = useState<string | null>(null);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [customFolders, setCustomFolders] = useState<string[]>([]);
 
   useEffect(() => {
     fetchPrompts();
@@ -34,10 +38,14 @@ export default function Home() {
         throw error;
       }
 
-      const validPrompts = (data || []).map(prompt => ({
-        ...prompt,
-        tags: Array.isArray(prompt.tags) ? prompt.tags : []
-      }));
+      const validPrompts = (data || []).map(prompt => {
+        const { tags = [], folder = "Life", ...rest } = prompt as any;
+        return {
+          ...rest,
+          tags: Array.isArray(tags) ? tags : [],
+          folder: folder || "Life",
+        };
+      });
 
       setPrompts(validPrompts);
     } catch (error) {
@@ -52,7 +60,8 @@ export default function Home() {
     try {
       const promptData = {
         ...newPrompt,
-        tags: Array.isArray(newPrompt.tags) ? newPrompt.tags : []
+        tags: Array.isArray(newPrompt.tags) ? newPrompt.tags : [],
+        folder: newPrompt.folder || "Life",
       };
 
       const { data, error } = await supabase
@@ -65,7 +74,15 @@ export default function Home() {
       }
 
       if (data && data.length > 0) {
-        setPrompts([data[0], ...prompts]);
+        const { tags = [], folder = "Life", ...rest } = data[0] as any;
+        setPrompts([
+          {
+            ...rest,
+            tags: Array.isArray(tags) ? tags : [],
+            folder: folder || "Life",
+          },
+          ...prompts,
+        ]);
         toast.success("Prompt added successfully");
       }
     } catch (error) {
@@ -79,7 +96,8 @@ export default function Home() {
     try {
       const promptData = {
         ...updatedPrompt,
-        tags: Array.isArray(updatedPrompt.tags) ? updatedPrompt.tags : []
+        tags: Array.isArray(updatedPrompt.tags) ? updatedPrompt.tags : [],
+        folder: updatedPrompt.folder || "Life",
       };
 
       const { data, error } = await supabase
@@ -93,7 +111,16 @@ export default function Home() {
       }
 
       if (data && data.length > 0) {
-        setPrompts(prompts.map(p => p.id === id ? data[0] : p));
+        const { tags = [], folder = "Life", ...rest } = data[0] as any;
+        setPrompts(prompts.map(p =>
+          p.id === id
+            ? {
+                ...rest,
+                tags: Array.isArray(tags) ? tags : [],
+                folder: folder || "Life",
+              }
+            : p
+        ));
         toast.success("Prompt updated successfully");
       }
     } catch (error) {
@@ -182,16 +209,29 @@ export default function Home() {
             <p className="text-sm text-muted-foreground">
               Organize and manage your AI prompts
             </p>
+            <Button onClick={() => setIsAddDialogOpen(true)}>
+              New Prompt
+            </Button>
           </div>
-          <PromptForm onSubmit={addPrompt} />
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Prompt</DialogTitle>
+              </DialogHeader>
+              <PromptForm
+                onSubmit={addPrompt}
+                customFolders={customFolders}
+                submitLabel="Add Prompt"
+                onCancel={() => setIsAddDialogOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
         </Header>
         <main className="flex-1 container py-6 overflow-auto">
           <PromptGrid
             prompts={filteredPrompts}
             onDelete={deletePrompt}
             onUpdate={updatePrompt}
-            activeTag={activeTag}
-            searchQuery={searchQuery}
           />
         </main>
         <FolderList />

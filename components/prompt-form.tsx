@@ -28,15 +28,17 @@ const formSchema = z.object({
 interface PromptFormProps {
   onSubmit: (data: NewPrompt) => Promise<void>;
   customFolders?: string[];
+  initialValues?: Partial<z.infer<typeof formSchema>>;
+  submitLabel?: string;
+  onCancel?: () => void;
 }
 
-export function PromptForm({ onSubmit, customFolders = [] }: PromptFormProps) {
-  const [open, setOpen] = useState(false);
+export function PromptForm({ onSubmit, customFolders = [], initialValues, submitLabel = "Add Prompt", onCancel }: PromptFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: initialValues || {
       title: "",
       content: "",
       folder: "All",
@@ -54,8 +56,8 @@ export function PromptForm({ onSubmit, customFolders = [] }: PromptFormProps) {
         tags: values.tags || [],
       });
       form.reset();
-      setOpen(false);
-      toast.success("Prompt added successfully");
+      if (onCancel) onCancel();
+      toast.success(submitLabel === "Save" ? "Prompt updated successfully" : "Prompt added successfully");
     } catch (error) {
       console.error("Failed to add prompt:", error);
       toast.error("Failed to add prompt. Please try again.");
@@ -65,143 +67,129 @@ export function PromptForm({ onSubmit, customFolders = [] }: PromptFormProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <PlusCircle className="h-4 w-4" />
-          <span>New Prompt</span>
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Add New Prompt</DialogTitle>
-          <DialogDescription>
-            Create a new prompt to save for future use.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter a descriptive title" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="folder"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Folder</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue>{field.value}</SelectValue>
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="All">All</SelectItem>
-                      {FOLDERS.map((folder) => (
-                        <SelectItem key={folder} value={folder}>
-                          {folder}
-                        </SelectItem>
-                      ))}
-                      {customFolders.map((folder) => (
-                        <SelectItem key={folder} value={folder}>
-                          {folder}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="content"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Content</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Enter your prompt content"
-                      className="min-h-[100px]"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="best_for"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Best For</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Which AI models work best with this prompt?" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Add any additional context or notes"
-                      className="min-h-[80px]"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="tags"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tags</FormLabel>
-                  <FormControl>
-                    <TagInput
-                      value={field.value}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Adding..." : "Add Prompt"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="title"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Title</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter a descriptive title" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="folder"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Folder</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue>{field.value}</SelectValue>
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="All">All</SelectItem>
+                  {(FOLDERS as readonly string[]).filter(f => f !== "All").map((folder) => (
+                    <SelectItem key={folder} value={folder}>
+                      {folder}
+                    </SelectItem>
+                  ))}
+                  {customFolders
+                    .filter(folder => folder !== "All" && !(FOLDERS as readonly string[]).includes(folder))
+                    .map((folder) => (
+                      <SelectItem key={folder} value={folder}>
+                        {folder}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="content"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Content</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Enter your prompt content"
+                  className="min-h-[100px]"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="best_for"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Best For</FormLabel>
+              <FormControl>
+                <Input placeholder="Which AI models work best with this prompt?" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="notes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Notes</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Add any additional context or notes"
+                  className="min-h-[80px]"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="tags"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tags</FormLabel>
+              <FormControl>
+                <TagInput
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? (submitLabel === "Save" ? "Saving..." : "Adding...") : submitLabel}
+          </Button>
+        </DialogFooter>
+      </form>
+    </Form>
   );
 }
