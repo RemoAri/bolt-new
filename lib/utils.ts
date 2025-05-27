@@ -29,23 +29,10 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   }
 }
 
-export async function getFolders(): Promise<Folder[]> {
-  try {
-    const { data, error } = await supabase
-      .from('folders')
-      .select('*')
-      .order('name');
+export const FOLDERS = ['Work', 'Life'] as const;
 
-    if (error) {
-      console.error('Error fetching folders:', error);
-      return [];
-    }
-
-    return data || [];
-  } catch (error) {
-    console.error('Error getting folders:', error);
-    return [];
-  }
+export function getIcon(folder: string) {
+  return folder === 'Work' ? 'briefcase' : 'heart';
 }
 
 export async function getUniqueTags(): Promise<string[]> {

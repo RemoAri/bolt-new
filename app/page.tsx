@@ -24,9 +24,9 @@ export default function Home() {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from("prompts")
-        .select("*, folders(*)")
-        .order("created_at", { ascending: false });
+        .from('prompts')
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) {
         throw error;
@@ -148,8 +148,8 @@ export default function Home() {
   });
 
   const promptCounts = prompts.reduce((acc, prompt) => {
-    const folderId = prompt.folder_id || "uncategorized";
-    acc[folderId] = (acc[folderId] || 0) + 1;
+    const folder = prompt.folder || 'Life';
+    acc[folder] = (acc[folder] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
