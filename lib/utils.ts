@@ -29,10 +29,17 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   }
 }
 
-export const FOLDERS = ['Work', 'Life'] as const;
+export const FOLDERS = ['All', 'Work', 'Life'] as const;
 
 export function getIcon(folder: string) {
-  return folder === 'Work' ? 'briefcase' : 'heart';
+  switch (folder) {
+    case 'Work':
+      return 'briefcase';
+    case 'Life':
+      return 'heart';
+    default:
+      return 'file-text';
+  }
 }
 
 export async function getUniqueTags(): Promise<string[]> {

@@ -38,7 +38,7 @@ export function PromptForm({ onSubmit }: PromptFormProps) {
     defaultValues: {
       title: "",
       content: "",
-      folder: "Life",
+      folder: "All",
       best_for: "",
       notes: "",
       tags: [],
@@ -103,6 +103,7 @@ export function PromptForm({ onSubmit }: PromptFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value="All">All</SelectItem>
                       <SelectItem value="Work">Work</SelectItem>
                       <SelectItem value="Life">Life</SelectItem>
                     </SelectContent>
