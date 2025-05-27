@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FileText, ChevronLeft, ChevronRight, Briefcase, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, FOLDERS, getIcon } from "@/lib/utils";
 import { PromptSearch } from "@/components/prompt-search";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { getFolders } from "@/lib/utils";
-import { Folder } from "@/types/prompt";
 
 interface SidebarProps {
   recentTags: string[];
@@ -30,26 +28,6 @@ export function Sidebar({
   promptCounts
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const [folders, setFolders] = useState<Folder[]>([]);
-
-  useEffect(() => {
-    const loadFolders = async () => {
-      const folderData = await getFolders();
-      setFolders(folderData);
-    };
-    loadFolders();
-  }, []);
-
-  const getIcon = (iconName: string) => {
-    switch (iconName) {
-      case 'briefcase':
-        return <Briefcase className="h-4 w-4" />;
-      case 'heart':
-        return <Heart className="h-4 w-4" />;
-      default:
-        return <FileText className="h-4 w-4" />;
-    }
-  };
 
   return (
     <div
@@ -107,20 +85,20 @@ export function Sidebar({
                     {Object.values(promptCounts).reduce((a, b) => a + b, 0)}
                   </span>
                 </Button>
-                {folders.map((folder) => (
+                {FOLDERS.map((folder) => (
                   <Button
-                    key={folder.id}
+                    key={folder}
                     variant="ghost"
                     className={cn(
                       "w-full justify-start gap-2",
-                      activeFolder === folder.id && "bg-accent"
+                      activeFolder === folder && "bg-accent"
                     )}
-                    onClick={() => onFolderClick(folder.id)}
+                    onClick={() => onFolderClick(folder)}
                   >
-                    {getIcon(folder.icon)}
-                    <span className="flex-1 text-left">{folder.name}</span>
+                    {folder === 'Work' ? <Briefcase className="h-4 w-4" /> : <Heart className="h-4 w-4" />}
+                    <span className="flex-1 text-left">{folder}</span>
                     <span className="text-xs text-muted-foreground">
-                      {promptCounts[folder.id] || 0}
+                      {promptCounts[folder] || 0}
                     </span>
                   </Button>
                 ))}
