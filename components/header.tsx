@@ -1,15 +1,17 @@
-import { ThemeToggle } from "@/components/theme-toggle";
-import { FileText } from "lucide-react";
+"use client";
 
-export function Header() {
+import { ThemeToggle } from "@/components/theme-toggle";
+
+interface HeaderProps {
+  children: React.ReactNode;
+}
+
+export function Header({ children }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/75 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
-        <div className="flex items-center gap-2 font-semibold">
-          <FileText className="h-5 w-5" />
-          <span className="hidden sm:inline-block">Prompt Library</span>
-        </div>
-        <div className="flex flex-1 items-center justify-end">
+      <div className="container flex h-14 items-center justify-between">
+        {children}
+        <div className="flex items-center gap-4">
           <ThemeToggle />
         </div>
       </div>

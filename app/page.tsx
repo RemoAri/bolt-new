@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Header } from "@/components/header";
 import { PromptForm } from "@/components/prompt-form";
 import { PromptGrid } from "@/components/prompt-grid";
+import { Sidebar } from "@/components/sidebar";
 import { Prompt, NewPrompt } from "@/types/prompt";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -11,6 +12,8 @@ import { toast } from "sonner";
 export default function Home() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchPrompts();
@@ -28,7 +31,6 @@ export default function Home() {
         throw error;
       }
 
-      // Ensure each prompt has a valid tags array
       const validPrompts = (data || []).map(prompt => ({
         ...prompt,
         tags: Array.isArray(prompt.tags) ? prompt.tags : []
@@ -115,34 +117,46 @@ export default function Home() {
     }
   }
 
+  const recentTags = Array.from(new Set(prompts.flatMap(p => p.tags || []))).slice(0, 10);
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setActiveTag(null);
+  };
+
+  const handleTagClick = (tag: string) => {
+    setActiveTag(activeTag === tag ? null : tag);
+    setSearchQuery("");
+  };
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 container py-6">
-        <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Your Prompts</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage and organize your collection of AI prompts.
+    <div className="flex h-screen">
+      <Sidebar
+        recentTags={recentTags}
+        onTagClick={handleTagClick}
+        activeTag={activeTag}
+        onSearch={handleSearch}
+      />
+      <div className="flex-1 flex flex-col">
+        <Header>
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-semibold">Prompt Library</h1>
+            <p className="text-sm text-muted-foreground">
+              Organize and manage your AI prompts
             </p>
           </div>
           <PromptForm onSubmit={addPrompt} />
-        </div>
-
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-64 rounded-lg bg-muted animate-pulse" />
-            ))}
-          </div>
-        ) : (
-          <PromptGrid 
-            prompts={prompts} 
+        </Header>
+        <main className="flex-1 container py-6 overflow-auto">
+          <PromptGrid
+            prompts={prompts}
             onDelete={deletePrompt}
             onUpdate={updatePrompt}
+            activeTag={activeTag}
+            searchQuery={searchQuery}
           />
-        )}
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
