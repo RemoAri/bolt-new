@@ -116,7 +116,7 @@ export function PromptCard({ prompt, onDelete, onUpdate, isSelected = false, onS
           }`}
         >
           <CardHeader className="pb-2">
-            <div className="flex justify-between items-start gap-2">
+            <div className="flex items-start gap-2">
               <CardTitle className="line-clamp-1">{prompt.title}</CardTitle>
               {prompt.best_for && (
                 <Badge variant="secondary" className="text-xs px-2 py-1">
@@ -124,7 +124,6 @@ export function PromptCard({ prompt, onDelete, onUpdate, isSelected = false, onS
                 </Badge>
               )}
             </div>
-            <CardDescription>{formatDate(new Date(prompt.created_at))}</CardDescription>
             {prompt.tags && prompt.tags.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {prompt.tags.map(tag => (
@@ -192,26 +191,26 @@ export function PromptCard({ prompt, onDelete, onUpdate, isSelected = false, onS
               </div>
             )}
           </CardContent>
-          <CardFooter className="flex justify-between pt-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="w-24 transition-all duration-200"
-              onClick={handleCopy}
-            >
-              {isCopied ? (
-                <>
-                  <Check className="mr-1 h-4 w-4" />
-                  Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="mr-1 h-4 w-4" />
-                  Copy
-                </>
-              )}
-            </Button>
-            <div className="flex gap-2">
+          <CardFooter className="flex justify-between items-center pt-2">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-24 transition-all duration-200"
+                onClick={handleCopy}
+              >
+                {isCopied ? (
+                  <>
+                    <Check className="mr-1 h-4 w-4" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="mr-1 h-4 w-4" />
+                    Copy
+                  </>
+                )}
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -257,6 +256,9 @@ export function PromptCard({ prompt, onDelete, onUpdate, isSelected = false, onS
                 </AlertDialogContent>
               </AlertDialog>
             </div>
+            <span className="text-sm text-muted-foreground">
+              {formatDate(new Date(prompt.created_at))}
+            </span>
           </CardFooter>
         </Card>
       </motion.article>

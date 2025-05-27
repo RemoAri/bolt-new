@@ -61,39 +61,36 @@ export function PromptGrid({ prompts: initialPrompts, onDelete, onUpdate }: Prom
   }
 
   return (
-    <>
-      <PromptSearch onSearch={handleSearch} />
-      <AnimatePresence>
-        {isSearching ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-64 rounded-lg bg-muted animate-pulse" />
-            ))}
-          </div>
-        ) : filteredPrompts.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">No prompts found</p>
-          </div>
-        ) : (
-          <motion.div 
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ staggerChildren: 0.1 }}
-          >
-            {filteredPrompts.map((prompt) => (
-              <PromptCard
-                key={prompt.id}
-                prompt={prompt}
-                onDelete={handleDelete}
-                onUpdate={onUpdate}
-                isSelected={prompt.id === selectedPromptId}
-                onSelect={handleSelect}
-              />
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+    <AnimatePresence>
+      {isSearching ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-64 rounded-lg bg-muted animate-pulse" />
+          ))}
+        </div>
+      ) : filteredPrompts.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">No prompts found</p>
+        </div>
+      ) : (
+        <motion.div 
+          className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ staggerChildren: 0.1 }}
+        >
+          {filteredPrompts.map((prompt) => (
+            <PromptCard
+              key={prompt.id}
+              prompt={prompt}
+              onDelete={handleDelete}
+              onUpdate={onUpdate}
+              isSelected={prompt.id === selectedPromptId}
+              onSelect={handleSelect}
+            />
+          ))}
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
