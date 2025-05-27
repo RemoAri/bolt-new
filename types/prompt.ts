@@ -7,6 +7,7 @@ export interface Prompt {
   best_for?: string | null;
   notes?: string | null;
   tags: string[];
+  folder_id?: string | null;
 }
 
 export interface NewPrompt {
@@ -15,4 +16,5 @@ export interface NewPrompt {
   best_for?: string | null;
   notes?: string | null;
   tags: string[];
+  folder_id?: string | null;
 }
