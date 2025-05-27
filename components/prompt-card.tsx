@@ -13,7 +13,7 @@ import { Copy, Check, Trash2, ChevronDown, ChevronUp, Edit2, Save } from "lucide
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -35,19 +35,9 @@ interface PromptCardProps {
   onUpdate: (id: string, data: Partial<NewPrompt>) => Promise<void>;
   isSelected?: boolean;
   onSelect?: (id: string) => void;
-  onTagClick?: (tag: string) => void;
-  activeTag?: string | null;
 }
 
-export function PromptCard({ 
-  prompt, 
-  onDelete, 
-  onUpdate, 
-  isSelected = false, 
-  onSelect,
-  onTagClick,
-  activeTag
-}: PromptCardProps) {
+export function PromptCard({ prompt, onDelete, onUpdate, isSelected = false, onSelect }: PromptCardProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [showContent, setShowContent] = useState(false);
@@ -106,11 +96,6 @@ export function PromptCard({
     }
   };
 
-  const handleTagClick = (tag: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    onTagClick?.(tag);
-  };
-
   return (
     <>
       <motion.article
@@ -146,14 +131,7 @@ export function PromptCard({
                   <Badge
                     key={tag}
                     variant="secondary"
-                    className={cn(
-                      "text-xs capitalize cursor-pointer transition-colors",
-                      getTagColor(tag),
-                      activeTag === tag && "ring-2 ring-primary"
-                    )}
-                    onClick={(e) => handleTagClick(tag, e)}
-                    role="button"
-                    aria-label={`Filter by tag: ${tag}`}
+                    className={cn("text-xs capitalize", getTagColor(tag))}
                   >
                     {tag}
                   </Badge>
@@ -432,12 +410,7 @@ export function PromptCard({
                       <Badge
                         key={tag}
                         variant="secondary"
-                        className={cn(
-                          "capitalize cursor-pointer",
-                          getTagColor(tag),
-                          activeTag === tag && "ring-2 ring-primary"
-                        )}
-                        onClick={(e) => handleTagClick(tag, e)}
+                        className={cn("capitalize", getTagColor(tag))}
                       >
                         {tag}
                       </Badge>
