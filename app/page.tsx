@@ -137,7 +137,7 @@ export default function Home() {
   };
 
   const filteredPrompts = prompts.filter(prompt => {
-    const matchesFolder = !activeFolder || prompt.folder_id === activeFolder;
+    const matchesFolder = !activeFolder || activeFolder === 'All' || prompt.folder === activeFolder;
     const matchesTag = !activeTag || prompt.tags?.includes(activeTag);
     const matchesSearch = !searchQuery || 
       prompt.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -168,8 +168,8 @@ export default function Home() {
         <Header>
           <div className="flex items-center gap-4">
             <h1 className="text-xl font-semibold">
-              {activeFolder ? 
-                prompts.find(p => p.folder_id === activeFolder)?.folder?.name + " Prompts" : 
+              {activeFolder && activeFolder !== 'All' ? 
+                activeFolder + " Prompts" : 
                 "All Prompts"
               }
             </h1>

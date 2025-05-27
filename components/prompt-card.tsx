@@ -18,10 +18,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { TagInput } from "@/components/tag-input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const promptSchema = z.object({
   title: z.string().min(1, "Title is required").max(100, "Title must be less than 100 characters"),
   content: z.string().min(1, "Content is required").max(10000, "Content must be less than 10000 characters"),
+  folder: z.string().min(1, "Folder is required"),
   best_for: z.string().max(100, "Best for must be less than 100 characters").optional(),
   notes: z.string().max(1000, "Notes must be less than 1000 characters").optional(),
   tags: z.array(z.string()).optional(),
@@ -57,6 +59,7 @@ export function PromptCard({
     defaultValues: {
       title: prompt.title,
       content: prompt.content,
+      folder: prompt.folder || "All",
       best_for: prompt.best_for || "",
       notes: prompt.notes || "",
       tags: prompt.tags || [],
@@ -316,6 +319,28 @@ export function PromptCard({
                           className="min-h-[200px] font-mono text-sm"
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="folder"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Folder</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue>{field.value}</SelectValue>
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="All">All</SelectItem>
+                          <SelectItem value="Work">Work</SelectItem>
+                          <SelectItem value="Life">Life</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
