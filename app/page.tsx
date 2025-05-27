@@ -133,11 +133,11 @@ export default function Home() {
   };
 
   const handleFolderClick = (folderId: string) => {
-    setActiveFolder(folderId === "" ? "All" : folderId);
+    setActiveFolder(folderId);
   };
 
   const filteredPrompts = prompts.filter(prompt => {
-    const matchesFolder = !activeFolder || activeFolder === "All" || prompt.folder === activeFolder;
+    const matchesFolder = !activeFolder || activeFolder === "All" || (prompt.folder || "Life") === activeFolder;
     const matchesTag = !activeTag || prompt.tags?.includes(activeTag);
     const matchesSearch = !searchQuery || 
       prompt.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -148,8 +148,12 @@ export default function Home() {
   });
 
   const promptCounts = prompts.reduce((acc, prompt) => {
-    const folder = prompt.folder || 'Life';
+    const folder = prompt.folder || "Life";
+    if (folder === "All") {
+      return acc;
+    }
     acc[folder] = (acc[folder] || 0) + 1;
+    acc["All"] = (acc["All"] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
