@@ -8,6 +8,8 @@ import { Sidebar } from "@/components/sidebar";
 import { Prompt, NewPrompt } from "@/types/prompt";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { FolderList } from '@/components/folder-list';
+import { Toaster } from '@/components/ui/toaster';
 
 export default function Home() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
@@ -192,6 +194,8 @@ export default function Home() {
             searchQuery={searchQuery}
           />
         </main>
+        <FolderList />
+        <Toaster />
       </div>
     </div>
   );

@@ -1,461 +1,185 @@
 "use client";
 
 import { useState } from "react";
-import { Prompt, NewPrompt } from "@/types/prompt";
-import { formatDate, copyToClipboard, getTagColor, cn } from "@/lib/utils";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Copy, Check, Trash2, ChevronDown, ChevronUp, Edit2, Save } from "lucide-react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { TagInput } from "@/components/tag-input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MoreVertical, Star, StarOff, Copy, Trash2, FolderIcon } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { createBrowserClient } from '@supabase/ssr';
+import { useToast } from '@/components/ui/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-const promptSchema = z.object({
-  title: z.string().min(1, "Title is required").max(100, "Title must be less than 100 characters"),
-  content: z.string().min(1, "Content is required").max(10000, "Content must be less than 10000 characters"),
-  folder: z.string().min(1, "Folder is required"),
-  best_for: z.string().max(100, "Best for must be less than 100 characters").optional(),
-  notes: z.string().max(1000, "Notes must be less than 1000 characters").optional(),
-  tags: z.array(z.string()).optional(),
-});
+interface Prompt {
+  id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  is_favorite: boolean;
+  folder: string;
+}
 
 interface PromptCardProps {
   prompt: Prompt;
+  onFavoriteToggle: (id: string, isFavorite: boolean) => void;
   onDelete: (id: string) => void;
-  onUpdate: (id: string, data: Partial<NewPrompt>) => Promise<void>;
-  isSelected?: boolean;
-  onSelect?: (id: string) => void;
+  onCopy: (content: string) => void;
+  onMoveToFolder: (promptId: string, folder: string) => void;
+  folders?: string[];
 }
 
-export function PromptCard({ prompt, onDelete, onUpdate, isSelected = false, onSelect }: PromptCardProps) {
-  const [isCopied, setIsCopied] = useState(false);
-  const [showNotes, setShowNotes] = useState(false);
-  const [showContent, setShowContent] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+export function PromptCard({
+  prompt,
+  onFavoriteToggle,
+  onDelete,
+  onCopy,
+  onMoveToFolder,
+  folders = [],
+}: PromptCardProps) {
+  const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
+  const { toast } = useToast();
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
-  const form = useForm<z.infer<typeof promptSchema>>({
-    resolver: zodResolver(promptSchema),
-    defaultValues: {
-      title: prompt.title,
-      content: prompt.content,
-      folder: prompt.folder || "All",
-      best_for: prompt.best_for || "",
-      notes: prompt.notes || "",
-      tags: prompt.tags || [],
-    },
-  });
-
-  const handleCopy = async (e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    const success = await copyToClipboard(prompt.content);
-    if (success) {
-      setIsCopied(true);
-      toast.success("Prompt copied to clipboard");
-      setTimeout(() => setIsCopied(false), 2000);
-    } else {
-      toast.error("Failed to copy prompt");
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-      e.preventDefault();
-      handleCopy();
-    }
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handleCardSelect();
-    }
-  };
-
-  const handleCardSelect = () => {
-    if (!isEditing) {
-      setIsDialogOpen(true);
-      onSelect?.(prompt.id);
-    }
-  };
-
-  const handleSubmit = async (values: z.infer<typeof promptSchema>) => {
+  const handleMoveToFolder = async (folder: string) => {
     try {
-      await onUpdate(prompt.id, values);
-      setIsEditing(false);
-      toast.success("Changes saved successfully");
+      const { error } = await supabase
+        .from('prompts')
+        .update({ folder })
+        .eq('id', prompt.id);
+
+      if (error) throw error;
+
+      onMoveToFolder(prompt.id, folder);
+      setIsMoveDialogOpen(false);
+      toast({
+        title: "Success",
+        description: folder ? "Prompt moved to folder" : "Prompt moved to root",
+      });
     } catch (error) {
-      toast.error("Failed to save changes");
+      console.error('Error moving prompt:', error);
+      toast({
+        title: "Error",
+        description: "Failed to move prompt. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
   return (
-    <>
-      <motion.article
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.3 }}
-        className="h-full"
-        tabIndex={0}
-        role="article"
-        aria-selected={isSelected}
-        onKeyDown={handleKeyDown}
-        onClick={handleCardSelect}
-      >
-        <Card 
-          className={`h-full flex flex-col transition-all duration-200 hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary ${
-            isSelected ? 'border-primary border-2' : ''
-          }`}
-        >
-          <CardHeader className="pb-2">
-            <div className="flex items-start gap-2">
-              <CardTitle className="line-clamp-1">{prompt.title}</CardTitle>
-              {prompt.best_for && (
-                <Badge variant="secondary" className="text-xs px-2 py-1">
-                  {prompt.best_for}
-                </Badge>
-              )}
+    <Card className="group relative overflow-hidden">
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+        <div className="space-y-1">
+          <h3 className="font-semibold leading-none tracking-tight">
+            {prompt.title}
+          </h3>
+          {prompt.folder && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <FolderIcon className="h-3 w-3" />
+              <span>{prompt.folder}</span>
             </div>
-            {prompt.tags && prompt.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {prompt.tags.map(tag => (
-                  <Badge
-                    key={tag}
-                    variant="secondary"
-                    className={cn("text-xs capitalize", getTagColor(tag))}
-                  >
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </CardHeader>
-          <CardContent className="flex-grow">
+          )}
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() => onFavoriteToggle(prompt.id, !prompt.is_favorite)}
+            >
+              {prompt.is_favorite ? (
+                <>
+                  <StarOff className="mr-2 h-4 w-4" />
+                  Remove from Favorites
+                </>
+              ) : (
+                <>
+                  <Star className="mr-2 h-4 w-4" />
+                  Add to Favorites
+                </>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onCopy(prompt.content)}>
+              <Copy className="mr-2 h-4 w-4" />
+              Copy Content
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setIsMoveDialogOpen(true)}>
+              <FolderIcon className="mr-2 h-4 w-4" />
+              Move to Folder
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onDelete(prompt.id)}
+              className="text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground line-clamp-3">
+          {prompt.content}
+        </p>
+        <div className="mt-4 flex flex-wrap gap-1">
+          {prompt.tags.map((tag) => (
+            <Badge key={tag} variant="secondary" className="text-xs">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      </CardContent>
+
+      <Dialog open={isMoveDialogOpen} onOpenChange={setIsMoveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Move to Folder</DialogTitle>
+            <DialogDescription>
+              Choose a folder to move this prompt to
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[300px]">
             <div className="space-y-2">
               <Button
                 variant="ghost"
-                size="sm"
-                className="h-8 w-full justify-between text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowContent(!showContent);
-                }}
-                aria-expanded={showContent}
+                className="w-full justify-start"
+                onClick={() => handleMoveToFolder("All")}
               >
-                <span>Prompt</span>
-                {showContent ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
+                <FolderIcon className="mr-2 h-4 w-4" />
+                All
               </Button>
-              {showContent && (
-                <div className="mt-2 text-sm text-muted-foreground bg-muted/50 p-2 rounded-md">
-                  <pre className="whitespace-pre-wrap font-sans">{prompt.content}</pre>
-                </div>
-              )}
-            </div>
-            
-            {prompt.notes && (
-              <div className="mt-4">
+              {folders.map((folder) => (
                 <Button
+                  key={folder}
                   variant="ghost"
-                  size="sm"
-                  className="h-8 w-full justify-between text-xs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowNotes(!showNotes);
-                  }}
-                  aria-expanded={showNotes}
+                  className="w-full justify-start"
+                  onClick={() => handleMoveToFolder(folder)}
                 >
-                  <span>Notes</span>
-                  {showNotes ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
+                  <FolderIcon className="mr-2 h-4 w-4" />
+                  {folder}
                 </Button>
-                {showNotes && (
-                  <div className="mt-2 text-sm text-muted-foreground bg-muted/50 p-2 rounded-md">
-                    {prompt.notes}
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-          <CardFooter className="flex justify-between items-center pt-2">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="secondary"
-                size="sm"
-                className="w-24 transition-all duration-200"
-                onClick={handleCopy}
-              >
-                {isCopied ? (
-                  <>
-                    <Check className="mr-1 h-4 w-4" />
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy className="mr-1 h-4 w-4" />
-                    Copy
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-primary"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsEditing(true);
-                  setIsDialogOpen(true);
-                }}
-              >
-                <Edit2 className="h-4 w-4" />
-              </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="text-muted-foreground hover:text-destructive"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Prompt</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to delete this prompt? This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => {
-                        onDelete(prompt.id);
-                        toast.success("Prompt deleted successfully");
-                      }}
-                      className="bg-destructive hover:bg-destructive/90"
-                    >
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              ))}
             </div>
-            <span className="text-sm text-muted-foreground">
-              {formatDate(new Date(prompt.created_at))}
-            </span>
-          </CardFooter>
-        </Card>
-      </motion.article>
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[700px]">
-          <DialogHeader>
-            <DialogTitle>
-              {isEditing ? "Edit Prompt" : prompt.title}
-            </DialogTitle>
-          </DialogHeader>
-
-          {isEditing ? (
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Title</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="content"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Content</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          {...field}
-                          className="min-h-[200px] font-mono text-sm"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="folder"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Folder</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue>{field.value}</SelectValue>
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="All">All</SelectItem>
-                          <SelectItem value="Work">Work</SelectItem>
-                          <SelectItem value="Life">Life</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="best_for"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Best For</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="tags"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tags</FormLabel>
-                      <FormControl>
-                        <TagInput
-                          value={field.value || []}
-                          onChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setIsEditing(false);
-                      form.reset();
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit">
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Changes
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Created</p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDate(new Date(prompt.created_at))}
-                  </p>
-                </div>
-                {prompt.best_for && (
-                  <Badge variant="secondary">{prompt.best_for}</Badge>
-                )}
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Content</p>
-                <div className="rounded-md bg-muted p-4">
-                  <pre className="text-sm whitespace-pre-wrap">{prompt.content}</pre>
-                </div>
-              </div>
-              {prompt.tags && prompt.tags.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Tags</p>
-                  <div className="flex flex-wrap gap-2">
-                    {prompt.tags.map(tag => (
-                      <Badge
-                        key={tag}
-                        variant="secondary"
-                        className={cn("capitalize", getTagColor(tag))}
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {prompt.notes && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Notes</p>
-                  <div className="rounded-md bg-muted p-4">
-                    <p className="text-sm text-muted-foreground">{prompt.notes}</p>
-                  </div>
-                </div>
-              )}
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleCopy}
-                >
-                  {isCopied ? (
-                    <>
-                      <Check className="mr-2 h-4 w-4" />
-                      Copied
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy
-                    </>
-                  )}
-                </Button>
-                <Button
-                  onClick={() => setIsEditing(true)}
-                >
-                  <Edit2 className="mr-2 h-4 w-4" />
-                  Edit
-                </Button>
-              </div>
-            </div>
-          )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
-    </>
+    </Card>
   );
 }
