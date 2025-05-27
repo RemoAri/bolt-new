@@ -75,9 +75,9 @@ export function Sidebar({
                   variant="ghost"
                   className={cn(
                     "w-full justify-start gap-2",
-                    activeFolder === null && "bg-accent"
+                    activeFolder === "All" && "bg-accent"
                   )}
-                  onClick={() => onFolderClick("")}
+                  onClick={() => onFolderClick("All")}
                 >
                   <FileText className="h-4 w-4" />
                   <span className="flex-1 text-left">All Prompts</span>

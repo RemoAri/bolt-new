@@ -133,11 +133,11 @@ export default function Home() {
   };
 
   const handleFolderClick = (folderId: string) => {
-    setActiveFolder(folderId || null);
+    setActiveFolder(folderId === "" ? "All" : folderId);
   };
 
   const filteredPrompts = prompts.filter(prompt => {
-    const matchesFolder = !activeFolder || activeFolder === 'All' || prompt.folder === activeFolder;
+    const matchesFolder = !activeFolder || activeFolder === "All" || prompt.folder === activeFolder;
     const matchesTag = !activeTag || prompt.tags?.includes(activeTag);
     const matchesSearch = !searchQuery || 
       prompt.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
