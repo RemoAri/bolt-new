@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -10,13 +10,16 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { NewPrompt } from "@/types/prompt";
 import { TagInput } from "@/components/tag-input";
+import { getFolders } from "@/lib/utils";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required").max(100, "Title must be less than 100 characters"),
   content: z.string().min(1, "Content is required").max(10000, "Content must be less than 10000 characters"),
+  folder_id: z.string().min(1, "Folder is required"),
   best_for: z.string().max(100, "Best for must be less than 100 characters").optional(),
   notes: z.string().max(1000, "Notes must be less than 1000 characters").optional(),
   tags: z.array(z.string()).optional(),
@@ -29,12 +32,22 @@ interface PromptFormProps {
 export function PromptForm({ onSubmit }: PromptFormProps) {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [folders, setFolders] = useState<{ id: string; name: string; }[]>([]);
+
+  useEffect(() => {
+    const loadFolders = async () => {
+      const folderData = await getFolders();
+      setFolders(folderData);
+    };
+    loadFolders();
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
       content: "",
+      folder_id: "",
       best_for: "",
       notes: "",
       tags: [],
@@ -88,6 +101,30 @@ export function PromptForm({ onSubmit }: PromptFormProps) {
             />
             <FormField
               control={form.control}
+              name="folder_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Folder</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a folder" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {folders.map((folder) => (
+                        <SelectItem key={folder.id} value={folder.id}>
+                          {folder.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="content"
               render={({ field }) => (
                 <FormItem>
@@ -105,6 +142,22 @@ export function PromptForm({ onSubmit }: PromptFormProps) {
             />
             <FormField
               control={form.control}
+              name="tags"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tags</FormLabel>
+                  <FormControl>
+                    <TagInput
+                      value={field.value || []}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="best_for"
               render={({ field }) => (
                 <FormItem>
@@ -114,22 +167,6 @@ export function PromptForm({ onSubmit }: PromptFormProps) {
                       placeholder="e.g., GPT-4, Claude, Gemini" 
                       {...field} 
                       value={field.value || ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="tags"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tags</FormLabel>
-                  <FormControl>
-                    <TagInput
-                      value={field.value || []}
-                      onChange={field.onChange}
                     />
                   </FormControl>
                   <FormMessage />

@@ -14,6 +14,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeFolder, setActiveFolder] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPrompts();
@@ -24,7 +25,7 @@ export default function Home() {
       setLoading(true);
       const { data, error } = await supabase
         .from("prompts")
-        .select("*")
+        .select("*, folders(*)")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -110,6 +111,8 @@ export default function Home() {
       if (error) {
         throw error;
       }
+
+      setPrompts(prompts.filter(p => p.id !== id));
     } catch (error) {
       console.error("Error deleting prompt:", error);
       toast.error("Failed to delete prompt. Please try again.");
@@ -129,6 +132,27 @@ export default function Home() {
     setSearchQuery("");
   };
 
+  const handleFolderClick = (folderId: string) => {
+    setActiveFolder(folderId || null);
+  };
+
+  const filteredPrompts = prompts.filter(prompt => {
+    const matchesFolder = !activeFolder || prompt.folder_id === activeFolder;
+    const matchesTag = !activeTag || prompt.tags?.includes(activeTag);
+    const matchesSearch = !searchQuery || 
+      prompt.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      prompt.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      prompt.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    return matchesFolder && matchesTag && matchesSearch;
+  });
+
+  const promptCounts = prompts.reduce((acc, prompt) => {
+    const folderId = prompt.folder_id || "uncategorized";
+    acc[folderId] = (acc[folderId] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
   return (
     <div className="flex h-screen">
       <Sidebar
@@ -136,11 +160,19 @@ export default function Home() {
         onTagClick={handleTagClick}
         activeTag={activeTag}
         onSearch={handleSearch}
+        activeFolder={activeFolder}
+        onFolderClick={handleFolderClick}
+        promptCounts={promptCounts}
       />
       <div className="flex-1 flex flex-col">
         <Header>
           <div className="flex items-center gap-4">
-            <h1 className="text-xl font-semibold">Prompt Library</h1>
+            <h1 className="text-xl font-semibold">
+              {activeFolder ? 
+                prompts.find(p => p.folder_id === activeFolder)?.folder?.name + " Prompts" : 
+                "All Prompts"
+              }
+            </h1>
             <p className="text-sm text-muted-foreground">
               Organize and manage your AI prompts
             </p>
@@ -149,7 +181,7 @@ export default function Home() {
         </Header>
         <main className="flex-1 container py-6 overflow-auto">
           <PromptGrid
-            prompts={prompts}
+            prompts={filteredPrompts}
             onDelete={deletePrompt}
             onUpdate={updatePrompt}
             activeTag={activeTag}

@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { supabase } from '@/lib/supabase';
+import { Folder } from '@/types/prompt';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -28,7 +29,25 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   }
 }
 
-// Get unique tags from all prompts
+export async function getFolders(): Promise<Folder[]> {
+  try {
+    const { data, error } = await supabase
+      .from('folders')
+      .select('*')
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching folders:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error getting folders:', error);
+    return [];
+  }
+}
+
 export async function getUniqueTags(): Promise<string[]> {
   try {
     const { data, error } = await supabase
@@ -40,7 +59,6 @@ export async function getUniqueTags(): Promise<string[]> {
       return [];
     }
 
-    // Flatten all tag arrays and remove duplicates
     const allTags = data
       .flatMap(prompt => prompt.tags || [])
       .filter(Boolean);
@@ -52,17 +70,14 @@ export async function getUniqueTags(): Promise<string[]> {
   }
 }
 
-// Parse tags safely from database
 export function parseTags(tagsData: unknown): string[] {
   try {
     if (!tagsData) return [];
     
-    // If it's already an array, validate each item is a string
     if (Array.isArray(tagsData)) {
       return tagsData.filter((tag): tag is string => typeof tag === 'string');
     }
     
-    // If it's a string (JSON), parse it
     if (typeof tagsData === 'string') {
       try {
         const parsed = JSON.parse(tagsData);
@@ -81,7 +96,6 @@ export function parseTags(tagsData: unknown): string[] {
   }
 }
 
-// Generate a consistent color for a tag based on its name
 export function getTagColor(tag: string): string {
   const colors = [
     'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
@@ -93,7 +107,6 @@ export function getTagColor(tag: string): string {
     'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
   ];
 
-  // Use a simple hash function to get a consistent index
   const hash = tag.split('').reduce((acc, char) => {
     return char.charCodeAt(0) + ((acc << 5) - acc);
   }, 0);

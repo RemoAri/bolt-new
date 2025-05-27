@@ -1,29 +1,55 @@
 "use client";
 
-import { useState } from "react";
-import { FileText, ChevronLeft, ChevronRight, FolderClosed } from "lucide-react";
+import { useState, useEffect } from "react";
+import { FileText, ChevronLeft, ChevronRight, Briefcase, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { PromptSearch } from "@/components/prompt-search";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { getFolders } from "@/lib/utils";
+import { Folder } from "@/types/prompt";
 
 interface SidebarProps {
   recentTags: string[];
   onTagClick: (tag: string) => void;
   activeTag: string | null;
   onSearch: (query: string) => void;
+  activeFolder: string | null;
+  onFolderClick: (folderId: string) => void;
+  promptCounts: Record<string, number>;
 }
 
-export function Sidebar({ recentTags, onTagClick, activeTag, onSearch }: SidebarProps) {
+export function Sidebar({
+  recentTags,
+  onTagClick,
+  activeTag,
+  onSearch,
+  activeFolder,
+  onFolderClick,
+  promptCounts
+}: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [folders, setFolders] = useState<Folder[]>([]);
 
-  const folders = [
-    { name: "Work", count: 12 },
-    { name: "Creative Writing", count: 8 },
-    { name: "Development", count: 15 },
-    { name: "Marketing", count: 6 },
-  ];
+  useEffect(() => {
+    const loadFolders = async () => {
+      const folderData = await getFolders();
+      setFolders(folderData);
+    };
+    loadFolders();
+  }, []);
+
+  const getIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'briefcase':
+        return <Briefcase className="h-4 w-4" />;
+      case 'heart':
+        return <Heart className="h-4 w-4" />;
+      default:
+        return <FileText className="h-4 w-4" />;
+    }
+  };
 
   return (
     <div
@@ -67,15 +93,35 @@ export function Sidebar({ recentTags, onTagClick, activeTag, onSearch }: Sidebar
                 FOLDERS
               </h2>
               <div className="space-y-1">
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start gap-2",
+                    activeFolder === null && "bg-accent"
+                  )}
+                  onClick={() => onFolderClick("")}
+                >
+                  <FileText className="h-4 w-4" />
+                  <span className="flex-1 text-left">All Prompts</span>
+                  <span className="text-xs text-muted-foreground">
+                    {Object.values(promptCounts).reduce((a, b) => a + b, 0)}
+                  </span>
+                </Button>
                 {folders.map((folder) => (
                   <Button
-                    key={folder.name}
+                    key={folder.id}
                     variant="ghost"
-                    className="w-full justify-start gap-2"
+                    className={cn(
+                      "w-full justify-start gap-2",
+                      activeFolder === folder.id && "bg-accent"
+                    )}
+                    onClick={() => onFolderClick(folder.id)}
                   >
-                    <FolderClosed className="h-4 w-4" />
+                    {getIcon(folder.icon)}
                     <span className="flex-1 text-left">{folder.name}</span>
-                    <span className="text-xs text-muted-foreground">{folder.count}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {promptCounts[folder.id] || 0}
+                    </span>
                   </Button>
                 ))}
               </div>
@@ -107,15 +153,6 @@ export function Sidebar({ recentTags, onTagClick, activeTag, onSearch }: Sidebar
           </>
         )}
       </ScrollArea>
-
-      {!collapsed && (
-        <div className="mt-auto p-4 border-t">
-          <Button className="w-full gap-2">
-            <FileText className="h-4 w-4" />
-            New Prompt
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
